@@ -1,5 +1,8 @@
-import psycopg2
+from zoneinfo import ZoneInfo
+
+import psycopg
 import pytz
+from psycopg.rows import namedtuple_row
 from datetime import datetime
 import os
 
@@ -65,56 +68,53 @@ class UnconfiguredEnvironment(Exception):
     pass
 
 
+def get_database_url() -> str:
+    database_url = os.getenv("DATABASE_URL")
+    if database_url is None:
+        raise UnconfiguredEnvironment("DATABASE_URL must be set")
+    return database_url
+
+
 class Schedule:
     def __init__(self):
-        try:
-            database_url = os.getenv("DATABASE_URL")
-        except KeyError:
-            raise UnconfiguredEnvironment("DATABASE_URL must be set")
+        self.conn = psycopg.connect(get_database_url())
 
-        self.conn = psycopg2.connect(database_url)
-
-    def get_date(self, date):
+    def get_date(self, date) -> dict[str, any]:
         query = """
             SELECT
                 i.video_id,
-                v.name as video_name,
+                v.name AS video_name,
                 v.organization_id,
-                o.name as organization_name,
+                o.name AS organization_name,
                 i.schedulereason,
                 i.starttime,
-                (i.starttime + i.duration) as endtime,
-                date_trunc('day', i.starttime) as perceived_start_date,
-                date_trunc('day', %s) as perceived_query_date
+                (i.starttime + i.duration) AS endtime,
+                date_trunc('day', i.starttime) AS perceived_start_date,
+                date_trunc('day', %s) AS perceived_query_date
             FROM fk_scheduleitem AS i
             JOIN fk_video AS v ON (video_id = v.id)
             JOIN fk_organization AS o ON (v.organization_id = o.id)
-            WHERE (date_trunc('day', i.starttime at time zone 'Europe/Oslo') =
-                date_trunc('day', %s at time zone 'Europe/Oslo'))
-            ORDER BY i.starttime ASC;"""
-        cur = self.conn.cursor()
-        cur.execute(
-            query,
-            (
-                date,
-                date,
-            ),
-        )
-        schedule_data = cur.fetchall()
-        schedule = {}
-        schedule["date"] = date
-        schedule["items"] = []
-        for item in schedule_data:
-            new_item = ScheduledVideo()
-            new_item.CRID = "crid://frikanalen.no/%d" % (item[0],)
-            new_item.video = Video(ID=item[0], name=item[1])
-            new_item.organization = Organization(ID=item[2], name=item[3])
-            new_item.reason = item[4]
-            new_item.start_time = item[5]
-            new_item.end_time = item[6]
-            new_item.perceived_start_date = item[7]
-            new_item.perceived_start_date_queried = item[8]
-            schedule["items"].append(new_item)
+            WHERE date_trunc('day', i.starttime AT TIME ZONE 'Europe/Oslo')
+                  = date_trunc('day', %s AT TIME ZONE 'Europe/Oslo')
+            ORDER BY i.starttime ASC;
+        """
+
+        schedule = {"date": date, "items": []}
+
+        with self.conn.cursor(row_factory=namedtuple_row) as cur:
+            cur.execute(query, (date, date))
+            rows = cur.fetchall()
+
+        for r in rows:
+            item = ScheduledVideo()
+            item.CRID = f"crid://frikanalen.no/{r.video_id}"
+            item.video = Video(ID=r.video_id, name=r.video_name)
+            item.organization = Organization(ID=r.organization_id, name=r.organization_name)
+            item.reason = r.schedulereason
+            item.start_time = r.starttime.astimezone(ZoneInfo("Europe/Oslo"))
+            item.end_time = r.endtime.astimezone(ZoneInfo("Europe/Oslo"))
+            schedule["items"].append(item)
+
         return schedule
 
 
