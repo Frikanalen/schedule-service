@@ -1,5 +1,7 @@
 replicaCount: 1
 
+timezone: Europe/Oslo
+
 deployment:
   image: ghcr.io/frikanalen/schedule-service
   pullPolicy: Always
