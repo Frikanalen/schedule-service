@@ -1,0 +1,12 @@
+[project]
+name = "schedule-service"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "flask>=3.1.1",
+    "jsonpickle>=4.1.1",
+    "psycopg2-binary>=2.9.10",
+    "pytz>=2025.2",
+]
