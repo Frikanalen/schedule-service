@@ -4,21 +4,24 @@ from datetime import datetime, timedelta
 import sys
 import os
 
-class Organization():
+
+class Organization:
     def __init__(self, ID, name):
         self.ID = ID
         self.name = name
 
-class Video():
+
+class Video:
     def __init__(self, ID, name):
         self.ID = ID
         self.name = name
         self.CRID = "crid://frikanalen.no/{}".format(ID)
 
     def __repr__(self):
-        return "Video[ID={},name=\"{}\"]".format(self.ID, self.name)
+        return 'Video[ID={},name="{}"]'.format(self.ID, self.name)
 
-class ScheduleItem():
+
+class ScheduleItem:
     def __repr__(self):
         s = "ScheduleItem["
         if self.start_time and self.end_time:
@@ -35,30 +38,35 @@ class ScheduleItem():
         self.end_time = None
         self.organization = None
 
+
 class ScheduledVideo(ScheduleItem):
     def __getstate__(self):
         return {
-                'videoID': self.video.ID,
-                'startTime': self.start_time,
-                'endTime': self.end_time,
-                'name': self.video.name,
-                'type': 'video'
-                }
+            "videoID": self.video.ID,
+            "startTime": self.start_time,
+            "endTime": self.end_time,
+            "name": self.video.name,
+            "type": "video",
+        }
+
 
 class Graphics(ScheduleItem):
     def __getstate__(self):
         return {
-                'url': self.URL,
-                'startTime': self.start_time,
-                'endTime': self.end_time,
-                'type': 'graphics',
-                }
+            "url": self.URL,
+            "startTime": self.start_time,
+            "endTime": self.end_time,
+            "type": "graphics",
+        }
+
 
 class UnconfiguredEnvironment(Exception):
     """base class for new exception"""
+
     pass
 
-class Schedule():
+
+class Schedule:
     def __init__(self):
         try:
             database_url = os.getenv("DATABASE_URL")
@@ -86,24 +94,31 @@ class Schedule():
                 date_trunc('day', %s at time zone 'Europe/Oslo'))
             ORDER BY i.starttime ASC;"""
         cur = self.conn.cursor()
-        cur.execute(query, (date,date,))
+        cur.execute(
+            query,
+            (
+                date,
+                date,
+            ),
+        )
         schedule_data = cur.fetchall()
         schedule = {}
-        schedule['date'] = date
-        schedule['items'] = []
+        schedule["date"] = date
+        schedule["items"] = []
         for item in schedule_data:
             new_item = ScheduledVideo()
             new_item.CRID = "crid://frikanalen.no/%d" % (item[0],)
-            new_item.video = Video(ID = item[0], name = item[1])
-            new_item.organization = Organization(ID = item[2], name = item[3])
+            new_item.video = Video(ID=item[0], name=item[1])
+            new_item.organization = Organization(ID=item[2], name=item[3])
             new_item.reason = item[4]
             new_item.start_time = item[5]
             new_item.end_time = item[6]
             new_item.perceived_start_date = item[7]
             new_item.perceived_start_date_queried = item[8]
-            schedule['items'].append(new_item)
+            schedule["items"].append(new_item)
         return schedule
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     s = Schedule()
-    print(s.get_date(datetime.now(tz=pytz.timezone('Europe/Oslo'))))
+    print(s.get_date(datetime.now(tz=pytz.timezone("Europe/Oslo"))))

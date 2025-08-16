@@ -3,8 +3,7 @@ import jsonpickle
 from datetime import datetime, timedelta
 
 
-
-class Schedule():
+class Schedule:
     def __init__(self):
         self.db = Database()
 
@@ -25,10 +24,7 @@ class Schedule():
             ORDER BY i.starttime ASC;"""
         cur = self.db.conn.cursor()
         cur.execute(query, (date,))
-        schedule = {
-            'date': date,
-            'items': []
-        }
+        schedule = {"date": date, "items": []}
 
         for item in cur.fetchall():
             new_item = ScheduledVideo()
@@ -41,8 +37,7 @@ class Schedule():
             schedule["items"].append(new_item)
         return schedule
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     s = Schedule()
     print(s.get_for_date(datetime.now()))
-    
-

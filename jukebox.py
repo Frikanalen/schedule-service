@@ -7,8 +7,7 @@ from database.connection import get_connstring
 logger = logging.get_logger(__name__)
 
 
-
-class Gap():
+class Gap:
     def __init__(self, start_time, end_time):
         self.start_time = start_time
         self.end_time = end_time
@@ -20,23 +19,27 @@ class Gap():
     def __repr__(self):
         return f"Gap from {self.start_time} to {self.end_time}"
 
+
 def get_gaps(start_time, end_time):
     conn = psycopg2.connect(get_connstring())
     cur = conn.cursor()
 
     min_gap_duration = timedelta(minutes=5)
     cur.execute(
-            "select gap_start_time, gap_end_time from fk_schedule_gaps(%s, %s) where gap_duration >= %s",
-            (start_time, end_time, min_gap_duration)
-            )
+        "select gap_start_time, gap_end_time from fk_schedule_gaps(%s, %s) where gap_duration >= %s",
+        (start_time, end_time, min_gap_duration),
+    )
     return [Gap(*row) for row in cur.fetchall()]
+
 
 def random_video():
     query = "select * from fk_video where is_filler=True order by random() limit 1;"
 
+
 def fill_gap(gap):
     new_gap = gap
-    #new_gap.start_time += time_consumed
+    # new_gap.start_time += time_consumed
+
 
 def split_gaps(gap_list):
     return gap_list
@@ -44,6 +47,7 @@ def split_gaps(gap_list):
     for gap in gap_list:
         if gap.duration >= timedelta(minutes=30):
             pass
+
 
 def fill_today():
     start_time = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -56,5 +60,6 @@ def fill_today():
     for gap in gaps:
         fill_gap(gap)
 
-if __name__=='__main__':
+
+if __name__ == "__main__":
     print(fill_today())
