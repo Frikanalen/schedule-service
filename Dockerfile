@@ -1,19 +1,36 @@
-FROM python:3.8-alpine as base
+FROM python:3.11-alpine3.20 AS builder
 
-WORKDIR /srv/frikanalen
+COPY --from=ghcr.io/astral-sh/uv:0.6.9 /uv /uvx /bin/
+ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
+# Disable Python downloads, because we want to use the system interpreter
+# across both images. If using a managed Python version, it needs to be
+# copied from the build image into the final image; see `standalone.Dockerfile`
+# for an example.
+ENV UV_PYTHON_DOWNLOADS=0
 
-RUN apk update && apk add postgresql-dev gcc python3-dev musl-dev
+WORKDIR /app
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    uv sync --frozen --no-install-project --no-dev
+ADD . /app
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev
 
-FROM base AS dependencies
+# Then, use a final image without uv
+FROM python:3.11-alpine3.20
+# It is important to use the image that matches the builder, as the path to the
+# Python executable must be the same, e.g., using `python:3.11-slim-bookworm`
+# will fail.
 
-COPY requirements.txt ./
+WORKDIR /app
 
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy the application from the builder
+COPY --from=builder --chown=app:app /app .
 
-FROM dependencies
+# Place executables in the environment at the front of the path
+ENV PATH="/app/.venv/bin:$PATH"
 
-COPY . .
+CMD ["gunicorn",  "app:app", "--bind", "0.0.0.0:5000"]
 
-CMD ["flask", "run", "-h", "0.0.0.0", "-p", "80"]
-
-EXPOSE 80
+EXPOSE 5000
