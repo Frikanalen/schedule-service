@@ -1,5 +1,5 @@
 import schedule
-from xml.etree.ElementTree import Element, SubElement, Comment, tostring
+from xml.etree.ElementTree import Element, SubElement, tostring
 from datetime import datetime, timedelta
 
 

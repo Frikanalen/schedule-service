@@ -1,5 +1,4 @@
 from itertools import tee
-import json
 from database import Schedule
 from datetime import datetime
 import pytz

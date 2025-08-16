@@ -1,7 +1,6 @@
 import psycopg2
 import pytz
-from datetime import datetime, timedelta
-import sys
+from datetime import datetime
 import os
 
 

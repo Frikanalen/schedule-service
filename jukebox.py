@@ -1,5 +1,4 @@
 import psycopg2
-import os
 import logging
 from datetime import datetime, timedelta
 from database.connection import get_connstring

@@ -1,6 +1,4 @@
-import psycopg2
-import jsonpickle
-from datetime import datetime, timedelta
+from datetime import datetime
 
 
 class Schedule:
