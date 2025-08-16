@@ -9,12 +9,10 @@ class Schedule():
         self.db = Database()
 
     def get_for_date(self, date):
-        date_str = "%04d-%02d-%02d" % (date.year, date.month, date.day)
         query = """
             SELECT
                 i.video_id,
                 v.name as video_name,
-                v.framerate as framerate,
                 v.organization_id,
                 o.name as organization_name,
                 i.schedulereason,
@@ -23,24 +21,24 @@ class Schedule():
             FROM fk_scheduleitem AS i
             JOIN fk_video AS v ON (video_id = v.id)
             JOIN fk_organization AS o ON (v.organization_id = o.id)
-            WHERE (date_trunc('day', i.starttime) = 
-                date_trunc('day', %s))
+            WHERE (date_trunc('day', i.starttime) = date_trunc('day', %s))
             ORDER BY i.starttime ASC;"""
         cur = self.db.conn.cursor()
         cur.execute(query, (date,))
-        schedule_data = cur.fetchall()
-        schedule = {}
-        schedule['date'] = date
-        schedule['items'] = []
-        for item in schedule_data:
+        schedule = {
+            'date': date,
+            'items': []
+        }
+
+        for item in cur.fetchall():
             new_item = ScheduledVideo()
-            new_item.video = Video(ID = item[0], name = item[1], framerate = item[2])
-            new_item.organization = Organization(ID = item[3], name = item[3])
-            new_item.reason = item[5]
-            new_item.start_time = item[6]
-            new_item.end_time = item[7]
+            new_item.video = Video(ID=item[0], name=item[1])
+            new_item.organization = Organization(ID=item[2], name=item[3])
+            new_item.reason = item[4]
+            new_item.start_time = item[5]
+            new_item.end_time = item[6]
             new_item.CRID = "crid://frikanalen.no/%d" % (item[0],)
-            schedule['items'].append(new_item)
+            schedule["items"].append(new_item)
         return schedule
 
 if __name__=="__main__":

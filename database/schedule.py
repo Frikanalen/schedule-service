@@ -10,10 +10,9 @@ class Organization():
         self.name = name
 
 class Video():
-    def __init__(self, ID, name, framerate):
+    def __init__(self, ID, name):
         self.ID = ID
         self.name = name
-        self.framerate = framerate
         self.CRID = "crid://frikanalen.no/{}".format(ID)
 
     def __repr__(self):
@@ -42,7 +41,6 @@ class ScheduledVideo(ScheduleItem):
                 'videoID': self.video.ID,
                 'startTime': self.start_time,
                 'endTime': self.end_time,
-                'framerate': self.video.framerate,
                 'name': self.video.name,
                 'type': 'video'
                 }
@@ -77,7 +75,6 @@ class Schedule():
                 v.organization_id,
                 o.name as organization_name,
                 i.schedulereason,
-                v.framerate,
                 i.starttime,
                 (i.starttime + i.duration) as endtime,
                 date_trunc('day', i.starttime) as perceived_start_date,
@@ -97,13 +94,13 @@ class Schedule():
         for item in schedule_data:
             new_item = ScheduledVideo()
             new_item.CRID = "crid://frikanalen.no/%d" % (item[0],)
-            new_item.video = Video(ID = item[0], name = item[1], framerate = item[5])
+            new_item.video = Video(ID = item[0], name = item[1])
             new_item.organization = Organization(ID = item[2], name = item[3])
             new_item.reason = item[4]
-            new_item.start_time = item[6]
-            new_item.end_time = item[7]
-            new_item.perceived_start_date = item[8]
-            new_item.perceived_start_date_queried = item[9]
+            new_item.start_time = item[5]
+            new_item.end_time = item[6]
+            new_item.perceived_start_date = item[7]
+            new_item.perceived_start_date_queried = item[8]
             schedule['items'].append(new_item)
         return schedule
 
