@@ -1,0 +1,13 @@
+replicaCount: 1
+
+deployment:
+  image: ghcr.io/frikanalen/schedule-service
+  pullPolicy: Always
+
+database:
+  secret: django-postgres-passwords
+
+service:
+  type: ClusterIP
+  port: 80
+

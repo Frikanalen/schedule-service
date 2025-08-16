@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: schedule-service
+  labels:
+    app: schedule-service
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: schedule-service
+  template:
+    metadata:
+      labels:
+        app: schedule-service
+    spec:
+      containers:
+        - name: schedule-service
+          image: "{{ .Values.deployment.image }}"
+          imagePullPolicy: "{{.Values.deployment.pullPolicy}}"
+          ports:
+            - containerPort: 5000
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.secret }}
+                  key: DATABASE_URL
+
