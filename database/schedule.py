@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from zoneinfo import ZoneInfo
 
 import psycopg
@@ -6,60 +7,19 @@ from psycopg.rows import namedtuple_row
 from datetime import datetime
 import os
 
+from xsdata.formats.dataclass.serializers import XmlSerializer
 
+
+@dataclass
 class Organization:
-    def __init__(self, ID, name):
-        self.ID = ID
-        self.name = name
+    ID: int
+    name: str
 
 
+@dataclass
 class Video:
-    def __init__(self, ID, name):
-        self.ID = ID
-        self.name = name
-        self.CRID = "crid://frikanalen.no/{}".format(ID)
-
-    def __repr__(self):
-        return 'Video[ID={},name="{}"]'.format(self.ID, self.name)
-
-
-class ScheduleItem:
-    def __repr__(self):
-        s = "ScheduleItem["
-        if self.start_time and self.end_time:
-            s += self.start_time.strftime("[%d %H:%M-")
-            s += self.end_time.strftime("%H:%M]")
-        if self.video:
-            s += self.video.__repr__()
-        s += "]"
-        return s
-
-    def __init__(self):
-        self.video = None
-        self.start_time = None
-        self.end_time = None
-        self.organization = None
-
-
-class ScheduledVideo(ScheduleItem):
-    def __getstate__(self):
-        return {
-            "videoID": self.video.ID,
-            "startTime": self.start_time,
-            "endTime": self.end_time,
-            "name": self.video.name,
-            "type": "video",
-        }
-
-
-class Graphics(ScheduleItem):
-    def __getstate__(self):
-        return {
-            "url": self.URL,
-            "startTime": self.start_time,
-            "endTime": self.end_time,
-            "type": "graphics",
-        }
+    id: int
+    name: str
 
 
 class UnconfiguredEnvironment(Exception):
@@ -75,11 +35,27 @@ def get_database_url() -> str:
     return database_url
 
 
+@dataclass
+class ScheduledVideoDict:
+    CRID: str
+    video: Video
+    organization: Organization
+    reason: str
+    start_time: datetime
+    end_time: datetime
+
+
+@dataclass
+class ScheduleDict:
+    date: datetime
+    entries: list[ScheduledVideoDict]
+
+
 class Schedule:
     def __init__(self):
         self.conn = psycopg.connect(get_database_url())
 
-    def get_date(self, date) -> dict[str, any]:
+    def get_date(self, date) -> ScheduleDict:
         query = """
             SELECT
                 i.video_id,
@@ -99,25 +75,30 @@ class Schedule:
             ORDER BY i.starttime ASC;
         """
 
-        schedule = {"date": date, "items": []}
+        schedule = ScheduleDict(date=date, entries=[])
 
         with self.conn.cursor(row_factory=namedtuple_row) as cur:
             cur.execute(query, (date, date))
             rows = cur.fetchall()
 
         for r in rows:
-            item = ScheduledVideo()
-            item.CRID = f"crid://frikanalen.no/{r.video_id}"
-            item.video = Video(ID=r.video_id, name=r.video_name)
-            item.organization = Organization(ID=r.organization_id, name=r.organization_name)
-            item.reason = r.schedulereason
-            item.start_time = r.starttime.astimezone(ZoneInfo("Europe/Oslo"))
-            item.end_time = r.endtime.astimezone(ZoneInfo("Europe/Oslo"))
-            schedule["items"].append(item)
+            schedule.entries.append(
+                ScheduledVideoDict(
+                    CRID=f"crid://frikanalen.no/{r.video_id}",
+                    video=Video(id=r.video_id, name=r.video_name),
+                    organization=Organization(ID=r.organization_id, name=r.organization_name),
+                    reason=r.schedulereason,
+                    start_time=r.starttime.astimezone(ZoneInfo("Europe/Oslo")),
+                    end_time=r.endtime.astimezone(ZoneInfo("Europe/Oslo")),
+                )
+            )
 
         return schedule
 
 
 if __name__ == "__main__":
     s = Schedule()
-    print(s.get_date(datetime.now(tz=pytz.timezone("Europe/Oslo"))))
+    x = XmlSerializer()
+
+    print(x.render(s.get_date(datetime.now(tz=pytz.timezone("Europe/Oslo")))))
+

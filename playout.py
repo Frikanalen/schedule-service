@@ -4,7 +4,7 @@ from datetime import datetime
 import pytz
 import copy
 
-from database.schedule import Graphics
+from database.item import Graphics
 
 
 def add_graphics(video_list):
